@@ -14,7 +14,7 @@ In the global financial sector, Anti-Money Laundering (AML) compliance is a mult
 * **Dual-Pillar Risk Engine (Detection):** Moves beyond static rules with a deterministic risk engine. Evaluates transactions using a categorical risk matrix (jurisdiction, account age) combined with Z-score statistical anomaly detection to identify complex typologies like structuring and velocity abuse.
 * **Automated Triage Dashboard (Workflow):** A real-time, neomorphic UI that aggregates flagged alerts, tracks SLA deadlines, and visualizes exposed risk, allowing intelligence units to prioritize critical cases instantly.
 * **LLM-Powered Narrative Generation (Reporting):** The core intelligence module. Sentinel seamlessly passes contextual KYC and transaction data to an LLM, instantly drafting a structured, regulator-compliant SAR narrative.
-* **Cryptographic Audit Trail (Compliance):** Solves the AI "black box" problem. Every generated narrative maintains strict data lineage, linking specific claims in the generated text directly back to the raw database logs.
+* **Audit Trail (Compliance):** Solves the AI "black box" problem. Every generated narrative maintains strict data lineage, linking specific claims in the generated text directly back to the raw database logs.
 * **Enterprise-Grade Security:** Built for Tier-1 data compliance with Role-Based Access Control (RBAC), end-to-end JWT session management, and Bcrypt password hashing.
 
 ---
@@ -41,7 +41,7 @@ In the global financial sector, Anti-Money Laundering (AML) compliance is a mult
 2. **Analysis:** The Dual-Pillar Risk Engine calculates risk scores and detects statistical anomalies.
 3. **Triage:** High-risk alerts are pushed to the Frontend Dashboard based on SLA urgency.
 4. **Investigation Initiation:** Analyst triggers the LLM. Contextual data is injected into the prompt.
-5. **Generation & Audit:** The LLM generates the SAR narrative, while the backend creates a cryptographic hash linking the text claims back to the primary keys in the database.
+5. **Generation & Audit:** The LLM generates the SAR narrative, while the backend creates the text that links back to the primary keys in the database.
 
 ---
 
@@ -84,4 +84,4 @@ cd frontend
 npm install
 npm run dev
 ```
-The application will now be running at http://localhost:5173 (Frontend) and http://localhost:8000 (Backend API).
+The application will now be running in your browser locally.
