@@ -1,9 +1,54 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import apiClient from '../api/client';
 
 const NarrativeEditor = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const alertId = location.state?.alert_id || 1;
+  const sarData = location.state?.sar_data || { sar_narrative: '', audit_trail: [] };
+
+  const [uploadStatus, setUploadStatus] = useState(null);
+  
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        setUploadStatus('Uploading...');
+        await apiClient.post('/alerts/upload', formData);
+        setUploadStatus('Upload Success!');
+      } catch (error) {
+        setUploadStatus('Upload Failed.');
+        console.error("Upload error:", error);
+      }
+    }
+  };
+
+  const fileInputRef = useRef(null);
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    } else {
+      // Fallback manual DOM API if ref fails
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.onchange = handleFileUpload;
+      input.click();
+    }
+  };
+
+  const submitSAR = async () => {
+    try {
+      await apiClient.post(`/generate/${alertId}/submit`);
+      navigate('/dashboard');
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <div className="font-body min-h-screen flex flex-col bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
@@ -45,19 +90,29 @@ const NarrativeEditor = () => {
           <div className="neomorphic-raised rounded-[2rem] p-10 border-0 flex flex-col relative pb-32">
             <div className="pr-6 relative z-10">
               <div className="max-w-3xl mx-auto space-y-6 text-on-surface leading-relaxed font-normal text-[16px]">
-                <p>The transaction monitoring system flagged a series of high-velocity structured deposits totaling <span className="p-1 px-2 rounded-lg neomorphic-inset font-bold text-on-surface border border-white/20">₹ 50 Lakhs</span> within a 48-hour window. This pattern, originating from multiple tier-2 city terminals, suggests potential layering activity designed to circumvent standard threshold alerts.</p>
-                <p>The subject entity, registered as a wholesale logistics firm, lacks the historical volume to justify these inflows. Initial verification of the KYC documentation reveals inconsistencies in the registered office address, which appears to be a residential co-working space with no physical logistics infrastructure.</p>
+                {sarData.sar_narrative ? sarData.sar_narrative.split('\n').filter(p => p.trim()).map((para, i) => (
+                  <p key={i}>{para}</p>
+                )) : (
+                  <>
+                    <p>The transaction monitoring system flagged a series of high-velocity structured deposits totaling <span className="p-1 px-2 rounded-lg neomorphic-inset font-bold text-on-surface border border-white/20">₹ 50 Lakhs</span> within a 48-hour window. This pattern, originating from multiple tier-2 city terminals, suggests potential layering activity designed to circumvent standard threshold alerts.</p>
+                    <p>The subject entity, registered as a wholesale logistics firm, lacks the historical volume to justify these inflows. Initial verification of the KYC documentation reveals inconsistencies in the registered office address, which appears to be a residential co-working space with no physical logistics infrastructure.</p>
+                  </>
+                )}
                 
-                <div className="h-32 w-full rounded-2xl neomorphic-recessed flex items-center justify-center border-2 border-dashed border-outline-variant/30 hover:bg-surface-container-low transition-colors cursor-pointer group my-8">
+                <div onClick={triggerFileSelect} className="h-32 w-full rounded-2xl neomorphic-recessed flex items-center justify-center border-2 border-dashed border-outline-variant/30 hover:bg-surface-container-low transition-colors cursor-pointer group my-8 select-none">
                   <div className="flex flex-col items-center gap-2 text-on-surface-variant/70 group-hover:text-on-surface-variant">
                     <span className="material-symbols-outlined text-[24px]">cloud_upload</span>
-                    <p className="italic text-[13px] font-medium">Add supplementary evidence or drag files here...</p>
+                    <p className="italic text-[13px] font-medium">{uploadStatus || 'Add supplementary evidence or drag files here...'}</p>
                   </div>
                 </div>
 
-                <p>Cross-referencing with global watchlists has returned a tentative match for a secondary beneficial owner. Further audit of the linked entities (see Right Panel) is required before final filing.</p>
-                <p>Based on the analysis, we recommend an escalation to the compliance committee for EDD (Enhanced Due Diligence). Specifically, local field agents need to be dispatched to verify whether the co-working space has any registered employees of Vanguard Global Trade Ltd operating on-premises. If none are found, this likely constitutes a shell-entity network utilized solely for obfuscating transaction origins.</p>
-                <p>Until EDD is completed, the accounts tied to these transactions should remain under a temporary holding flag. The pattern aligns heavily with regional typologies described in STR Bulletin #449-B regarding unverified logistics entities moving structured deposits just below the $10,000 equivalent threshold.</p>
+                {!sarData.sar_narrative && (
+                  <>
+                    <p>Cross-referencing with global watchlists has returned a tentative match for a secondary beneficial owner. Further audit of the linked entities (see Right Panel) is required before final filing.</p>
+                    <p>Based on the analysis, we recommend an escalation to the compliance committee for EDD (Enhanced Due Diligence). Specifically, local field agents need to be dispatched to verify whether the co-working space has any registered employees of Vanguard Global Trade Ltd operating on-premises. If none are found, this likely constitutes a shell-entity network utilized solely for obfuscating transaction origins.</p>
+                    <p>Until EDD is completed, the accounts tied to these transactions should remain under a temporary holding flag. The pattern aligns heavily with regional typologies described in STR Bulletin #449-B regarding unverified logistics entities moving structured deposits just below the $10,000 equivalent threshold.</p>
+                  </>
+                )}
               </div>
             </div>
             
@@ -189,20 +244,19 @@ const NarrativeEditor = () => {
       <footer className="fixed bottom-0 left-0 w-full z-40">
         <div className="bg-surface/80 backdrop-blur-xl py-6 rounded-t-[2.5rem] border-t border-white/40 shadow-[0_-15px_40px_rgba(53,41,59,0.04)] w-full flex flex-col items-center">
           <div className="relative w-full max-w-4xl group">
-            <div className="flex flex-col items-center gap-3">
               <button 
-                onClick={() => navigate('/dashboard')}
+                onClick={submitSAR}
                 className="neomorphic-pill px-8 h-14 rounded-full flex items-center justify-center gap-3 active:scale-95 transition-all text-on-primary-fixed w-[280px]"
               >
                 <span className="material-symbols-outlined text-[20px]">verified</span>
                 <span className="font-display font-bold uppercase tracking-widest text-[15px]">Approve and File</span>
               </button>
               <p className="text-center text-[9px] text-on-surface-variant font-body tracking-wider uppercase font-medium">
-                Compliance Verification ID: SAR-2024-X992-ALPHA
+                Internal Tracking ID: {sarData.case_id || 'PENDING-GEN'}
               </p>
             </div>
           </div>
-        </div>
+        {/* </div> */}
       </footer>
     </div>
   );

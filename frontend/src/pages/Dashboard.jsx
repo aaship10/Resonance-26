@@ -1,12 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import apiClient from '../api/client';
 
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const role = location.state?.role || 'Analyst'; // Fallback to Analyst if navigated directly
 
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      console.log("Starting CSV upload...");
+      const response = await apiClient.post('/alerts/upload', formData);
+      console.log("Upload successful:", response);
+      // Optional: Refresh alerts after upload
+      const updatedAlerts = await apiClient.get('/alerts/');
+      setAlerts(updatedAlerts);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (role === 'Analyst') {
+      const fetchAlerts = async () => {
+        try {
+          const data = await apiClient.get('/alerts/');
+          setAlerts(data);
+        } catch (error) {
+          console.error("Failed to fetch alerts", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAlerts();
+    }
+  }, [role]);
   if (role !== 'Analyst') {
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center relative overflow-hidden">
@@ -70,7 +109,7 @@ const Dashboard = () => {
             </div>
             <h3 className="text-on-surface-variant text-sm font-semibold mb-1">New Alerts</h3>
             <div className="flex items-baseline space-x-2">
-              <span className="text-4xl font-extrabold text-tertiary tracking-tighter">24</span>
+              <span className="text-4xl font-extrabold text-tertiary tracking-tighter">{loading ? '-' : alerts.length}</span>
               <span className="text-xs text-error font-bold">+12% vs avg</span>
             </div>
           </div>
@@ -297,10 +336,21 @@ const Dashboard = () => {
       </main>
 
       {/* Contextual FAB */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-[0_10px_25px_rgba(107,88,118,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group z-50">
+      <button 
+        onClick={() => fileInputRef.current.click()}
+        className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-[0_10px_25px_rgba(107,88,118,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group z-50"
+      >
         <span className="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform duration-300">add</span>
         <span className="absolute right-16 bg-on-surface text-surface px-3 py-1 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-ambient-float">File New SAR</span>
       </button>
+
+      <input 
+        type="file" 
+        accept=".csv" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        style={{ display: 'none' }} 
+      />
     </div>
   );
 };

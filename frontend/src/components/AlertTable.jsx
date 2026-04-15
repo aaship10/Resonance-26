@@ -1,16 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MoreVertical, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const mockAlerts = [
-  { id: 'SAR-2026-890', entity: 'Stark Industries', risk: 'High', date: 'Oct 14, 2026', status: 'Pending', amount: '$4.2M' },
-  { id: 'SAR-2026-891', entity: 'Wayne Enterprises', risk: 'Medium', date: 'Oct 13, 2026', status: 'Under Review', amount: '$850K' },
-  { id: 'SAR-2026-892', entity: 'LexCorp Financial', risk: 'High', date: 'Oct 12, 2026', status: 'Pending', amount: '$12.5M' },
-  { id: 'SAR-2026-893', entity: 'Daily Planet', risk: 'Low', date: 'Oct 10, 2026', status: 'Resolved', amount: '$15K' },
-];
+import apiClient from '../api/client';
 
 const AlertTable = () => {
   const navigate = useNavigate();
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const data = await apiClient.get('/alerts/');
+        // Transform the backend data into the exact format the legacy mock expected
+        const mappedData = data.map(item => ({
+          id: item.case_id,
+          entity: item.customer_name,
+          risk: item.risk_score >= 80 ? 'High' : item.risk_score <= 40 ? 'Low' : 'Medium',
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: item.status,
+          amount: item.amount ? `$${item.amount}` : '$0'
+        }));
+        setAlerts(mappedData);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAlerts();
+  }, []);
+
+  // Gracefully fallback to mock styling if no real alerts show up during loading
+  const displayAlerts = alerts.length > 0 ? alerts : [];
 
   return (
     <div className="w-full">
@@ -35,7 +57,7 @@ const AlertTable = () => {
           
           {/* Rows */}
           <div className="flex flex-col space-y-3">
-            {mockAlerts.map((alert, index) => (
+            {loading ? <div className="text-sm px-6 font-semibold py-4">Loading...</div> : displayAlerts.map((alert, index) => (
               <div 
                 key={alert.id} 
                 onClick={() => navigate('/investigation')}

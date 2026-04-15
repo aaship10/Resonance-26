@@ -1,9 +1,35 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import apiClient from '../api/client';
 
 const InvestigationHub = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const alertId = location.state?.alert_id || 1;
+
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const result = await apiClient.get(`/alerts/${alertId}`);
+        setData(result);
+      } catch (error) {
+        console.error("Failed to fetch alert details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [alertId]);
+
+  if (loading) return <div className="min-h-screen bg-surface flex items-center justify-center text-primary font-bold uppercase tracking-widest">Initialising Intelligence...</div>;
+  if (!data) return <div className="min-h-screen bg-surface flex items-center justify-center text-error font-bold uppercase tracking-widest">Error Loading Case</div>;
+
+  const { alert, customer } = data;
+
 
   return (
     <div className="bg-surface text-on-surface font-body min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
@@ -53,21 +79,21 @@ const InvestigationHub = () => {
               <div className="space-y-4">
                 <div className="mb-2">
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest font-body mb-1">Subject Entity</p>
-                  <h3 className="text-[19px] font-bold font-display text-on-surface tracking-tight">Vanguard Global Trade Ltd</h3>
+                  <h3 className="text-[19px] font-bold font-display text-on-surface tracking-tight">{customer?.full_name || 'Unknown Entity'}</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="p-3.5 rounded-2xl neomorphic-inset border border-white/20 text-center flex flex-col justify-center items-center gap-1 bg-surface-container-low/50">
                     <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Jurisdiction</p>
                     <div className="flex items-center justify-center gap-1.5 text-on-surface mt-[2px]">
                       <span className="material-symbols-outlined text-[14px]">public</span>
-                      <span className="text-[12px] font-bold">Cyprus<br/>(CY)</span>
+                      <span className="text-[12px] font-bold">{customer?.nationality || 'N/A'}<br/>(Intl)</span>
                     </div>
                   </div>
                   <div className="p-3.5 rounded-2xl neomorphic-inset border border-white/20 text-center flex flex-col justify-center items-center gap-1 bg-surface-container-low/50">
                     <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Onboarding</p>
                     <div className="flex items-center justify-center gap-1.5 text-on-surface mt-[2px]">
                       <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                      <span className="text-[12px] font-bold whitespace-nowrap">12-Oct-2023</span>
+                      <span className="text-[12px] font-bold whitespace-nowrap">{customer?.account_opening_date ? new Date(customer.account_opening_date).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -83,11 +109,11 @@ const InvestigationHub = () => {
               <ul className="space-y-[1.1rem]">
                 <li className="flex items-center justify-between text-[13px] border-b border-outline-variant/10 pb-2">
                   <span className="text-on-surface-variant font-medium">Suspicion Score</span>
-                  <span className="font-bold text-error">88/100</span>
+                  <span className="font-bold text-error">{alert?.risk_score}/100</span>
                 </li>
                 <li className="flex items-center justify-between text-[13px] border-b border-outline-variant/10 pb-2">
-                  <span className="text-on-surface-variant font-medium">Active Alerts</span>
-                  <span className="font-bold text-on-surface">14 Flagged</span>
+                  <span className="text-on-surface-variant font-medium">Alert Status</span>
+                  <span className="font-bold text-on-surface">{alert?.status}</span>
                 </li>
                 <li className="flex items-center justify-between text-[13px]">
                   <span className="text-on-surface-variant font-medium">Verification Status</span>
@@ -171,7 +197,7 @@ const InvestigationHub = () => {
         {/* Action Element */}
         <div className="fixed bottom-10 left-1/2 lg:left-[calc(50%+110px)] -translate-x-1/2 w-fit px-6 z-30">
           <button 
-            onClick={() => navigate('/generating')}
+            onClick={() => navigate('/generating', { state: { alert_id: alertId } })}
             className="neomorphic-pill px-10 h-14 rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-all text-on-primary-fixed hover:scale-105 group"
           >
             <span className="material-symbols-outlined text-[18px] transition-transform group-hover:rotate-12">draw</span>

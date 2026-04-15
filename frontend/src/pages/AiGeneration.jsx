@@ -1,19 +1,35 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import apiClient from '../api/client';
 
 const AiGeneration = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const alertId = location.state?.alert_id || 1; // Assuming alert_id is passed or default 1
+
+  const [errorStatus, setErrorStatus] = useState(null);
 
   useEffect(() => {
-    // Automatically route to the narrative editor after 5 seconds to simulate synthesis completion
-    const timer = setTimeout(() => {
-      navigate('/narrative');
-    }, 5000);
+    // Attempt generation
+    const generateSAR = async () => {
+      try {
+        const result = await apiClient.post(`/generate/${alertId}`);
+        // Wait 2 secs minimum for effect, else proceed instantly after fetch
+        setTimeout(() => {
+          navigate('/narrative', { state: { alert_id: alertId, sar_data: result } });
+        }, 2000);
+      } catch (error) {
+        console.error("Failed to generate SAR:", error);
+        setErrorStatus("Failed to generate. See console or try again.");
+      }
+    };
+    generateSAR();
+  }, [navigate, alertId]);
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
-
+  if (errorStatus) {
+    console.error(errorStatus); // Minimal loading/error state
+  }
   return (
     <div className="bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen relative overflow-hidden flex items-center justify-center">
       {/* TopNavBar */}

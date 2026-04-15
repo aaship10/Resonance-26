@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import apiClient from '../api/client';
 const Login = () => {
   const navigate = useNavigate();
   
@@ -21,36 +21,24 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      let response;
+      let data;
       if (isRegistering) {
-        response = await fetch('http://localhost:8000/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employee_id: employeeId, password: passkey, role: activeRole }),
-        });
+        data = await apiClient.post('/register', { employee_id: employeeId, password: passkey, role: activeRole });
       } else {
         const formData = new URLSearchParams();
         formData.append('username', employeeId); 
         formData.append('password', passkey);    
         
-        response = await fetch('http://localhost:8000/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData,
+        data = await apiClient.post('/token', formData, { 
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' } 
         });
       }
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.detail || (isRegistering ? 'Registration failed. ID may already exist.' : 'Invalid Employee ID or Passkey'));
-      }
-
-      const data = await response.json();
-      localStorage.setItem('sentinel_token', data.access_token);
+      localStorage.setItem('access_token', data.access_token);
       navigate('/dashboard', { state: { role: activeRole } });
 
     } catch (err) {
-      setError(err.message);
+      setError(err.message || (isRegistering ? 'Registration failed. ID may already exist.' : 'Invalid Employee ID or Passkey'));
     } finally {
       setIsLoading(false);
     }
