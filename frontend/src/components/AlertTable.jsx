@@ -12,14 +12,14 @@ const AlertTable = () => {
     const fetchAlerts = async () => {
       try {
         const data = await apiClient.get('/alerts/');
-        // Transform the backend data into the exact format the legacy mock expected
         const mappedData = data.map(item => ({
+          db_id: item.id,
           id: item.case_id,
-          entity: item.customer_name,
+          entity: `Customer #${item.customer_id}`, // In a real app, join data or use a name field if added
           risk: item.risk_score >= 80 ? 'High' : item.risk_score <= 40 ? 'Low' : 'Medium',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          status: item.status,
-          amount: item.amount ? `$${item.amount}` : '$0'
+          date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          assigned_to: item.assigned_analyst_id || 'Unassigned',
+          amount: '₹ ---' // Transaction total can be fetched separately
         }));
         setAlerts(mappedData);
       } catch (e) {
@@ -51,7 +51,7 @@ const AlertTable = () => {
             <div className="col-span-1">Alert ID</div>
             <div className="col-span-2">Subject Entity</div>
             <div className="col-span-1">Risk Assessment</div>
-            <div className="col-span-1">Current Status</div>
+            <div className="col-span-1">Assigned To</div>
             <div className="col-span-1 text-right">Involved Amount</div>
           </div>
           
@@ -60,7 +60,7 @@ const AlertTable = () => {
             {loading ? <div className="text-sm px-6 font-semibold py-4">Loading...</div> : displayAlerts.map((alert, index) => (
               <div 
                 key={alert.id} 
-                onClick={() => navigate('/investigation')}
+                onClick={() => navigate('/investigation', { state: { alert_id: alert.db_id } })}
                 className={`grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-xl transition-all hover:shadow-[0_4px_12px_rgba(53,41,59,0.06)] cursor-pointer hover:scale-[1.01]
                   ${index % 2 === 0 ? 'bg-surface' : 'bg-surface-container-low'}
                 `}
@@ -76,7 +76,7 @@ const AlertTable = () => {
                      <span className="bg-surface-container-high px-3 py-1 rounded-full text-sm shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05),_1px_1px_2px_rgba(255,255,255,0.7)] text-on-surface-variant font-semibold">Medium</span>
                   )}
                 </div>
-                <div className="col-span-1 text-sm font-medium text-on-surface-variant">{alert.status}</div>
+                <div className="col-span-1 text-sm font-medium text-on-surface-variant max-w-full overflow-hidden text-ellipsis whitespace-nowrap">{alert.assigned_to}</div>
                 <div className="col-span-1 text-right font-display font-semibold text-on-surface flex items-center justify-end">
                   {alert.amount}
                   <button className="ml-3 p-1 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors">

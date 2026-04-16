@@ -10,6 +10,7 @@ const NarrativeEditor = () => {
   const sarData = location.state?.sar_data || { sar_narrative: '', audit_trail: [] };
 
   const [uploadStatus, setUploadStatus] = useState(null);
+  const [isFiled, setIsFiled] = useState(false);
   
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -43,9 +44,12 @@ const NarrativeEditor = () => {
 
   const submitSAR = async () => {
     try {
+      setIsFiled(true);
       await apiClient.post(`/generate/${alertId}/submit`);
-      navigate('/dashboard');
+      // Optional: don't navigate away immediately if user wants to see 'Filed' state
+      setTimeout(() => navigate('/dashboard'), 1500); 
     } catch (e) {
+      setIsFiled(false);
       console.error(e);
     }
   };
@@ -150,8 +154,16 @@ const NarrativeEditor = () => {
                 <div className="pl-4">
                   <span className="material-symbols-outlined text-primary text-[22px] block">terminal</span>
                 </div>
-                <input className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-on-surface placeholder:text-outline-variant/60 font-body text-[14px] py-2" placeholder="Refine narrative with commands (e.g., 'Focus more on high-velocity deposits', 'Explain the KYC deviation')..." type="text"/>
-                <button className="p-2 rounded-[0.8rem] bg-primary-container text-primary hover:brightness-95 active:scale-95 transition-all w-10 h-10 flex items-center justify-center">
+                <input 
+                  disabled={isFiled}
+                  className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-on-surface placeholder:text-outline-variant/60 font-body text-[14px] py-2" 
+                  placeholder={isFiled ? "SAR has been filed. Commands disabled." : "Refine narrative with commands (e.g., 'Focus more on high-velocity deposits', 'Explain the KYC deviation')..."} 
+                  type="text"
+                />
+                <button 
+                  disabled={isFiled}
+                  className="p-2 rounded-[0.8rem] bg-primary-container text-primary hover:brightness-95 active:scale-95 transition-all w-10 h-10 flex items-center justify-center disabled:opacity-50"
+                >
                   <span className="material-symbols-outlined block text-[18px]">send</span>
                 </button>
               </div>
@@ -246,10 +258,11 @@ const NarrativeEditor = () => {
           <div className="relative w-full max-w-4xl group">
               <button 
                 onClick={submitSAR}
-                className="neomorphic-pill px-8 h-14 rounded-full flex items-center justify-center gap-3 active:scale-95 transition-all text-on-primary-fixed w-[280px]"
+                disabled={isFiled}
+                className="neomorphic-pill px-8 h-14 rounded-full flex items-center justify-center gap-3 active:scale-95 transition-all text-on-primary-fixed w-[280px] disabled:opacity-75 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined text-[20px]">verified</span>
-                <span className="font-display font-bold uppercase tracking-widest text-[15px]">Approve and File</span>
+                <span className="material-symbols-outlined text-[20px]">{isFiled ? 'check_circle' : 'verified'}</span>
+                <span className="font-display font-bold uppercase tracking-widest text-[15px]">{isFiled ? 'SAR Filed' : 'Approve and File'}</span>
               </button>
               <p className="text-center text-[9px] text-on-surface-variant font-body tracking-wider uppercase font-medium">
                 Internal Tracking ID: {sarData.case_id || 'PENDING-GEN'}

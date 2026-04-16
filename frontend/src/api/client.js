@@ -1,23 +1,33 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-async function fetchClient(endpoint, options = {}) {
-  // Setup headers
+/**
+ * AUTH INTERCEPTOR:
+ * Automatically retrieves the JWT from localStorage and prepares headers.
+ */
+const getAuthHeaders = (options = {}) => {
+  const token = localStorage.getItem('access_token');
   const headers = { ...options.headers };
-  
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Handle standard JSON headers if not multipart/form-data
   if (!options.isFormData) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-  } else {
-    // Rely on the browser to append Content-Type with FormData boundary
+  }
+
+  return headers;
+};
+
+async function fetchClient(endpoint, options = {}) {
+  const headers = getAuthHeaders(options);
+  
+  // If isFormData is true, browser must set Content-Type + Boundary
+  if (options.isFormData) {
     delete headers['Content-Type'];
   }
 
-  // Attach Authentication token if exists in local storage
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`; // Adjust scheme if not Bearer
-  }
-
-  // Set up the fetch configuration
   const config = {
     ...options,
     headers,
@@ -26,24 +36,23 @@ async function fetchClient(endpoint, options = {}) {
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
 
-    // Provide generic error handling
     if (!response.ok) {
       let errorData;
       try {
         errorData = await response.json();
       } catch (e) {
-        errorData = { detail: 'An error occurred while parsing the error response.' };
+        errorData = { detail: 'API request failed' };
       }
       
       const error = new Error(errorData.detail || 'API Error');
       error.status = response.status;
       error.data = errorData;
-      // Depending on your structure, you could potentially intercept a 401 Unauthorized here
-      // to dispatch a logout action
+
+      // Global 401 Interceptor: Clean up stale tokens
       if (response.status === 401) {
-        // e.g., trigger automatic logout by removing the token
-        console.warn('Unauthorized! Deleting token...');
+        console.warn('Session expired or unauthorized. Clearing credentials.');
         localStorage.removeItem('access_token');
+        // Optional: Redirect to login if this is a blocking failure
       }
 
       throw error;
@@ -51,7 +60,6 @@ async function fetchClient(endpoint, options = {}) {
 
     return await response.json();
   } catch (error) {
-    // Re-throw the error so specific handlers can process it
     throw error;
   }
 }
@@ -62,26 +70,20 @@ export default {
     const isUrlEncoded = body instanceof URLSearchParams;
     const isFormData = body instanceof FormData;
     
-    // Copy options and headers
-    const finalOptions = { ...options };
-    const finalHeaders = { ...options.headers };
-
-    if (isUrlEncoded) {
-      finalHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-    } else if (isFormData) {
-      // Browsers automatically set Content-Type with boundary for FormData
-      // Delete the default application/json header set in fetchClient if it exists
-      // Wait, fetchClient ALWAYS sets application/json. We must pass a flag to tell it not to!
-      // But we can just set it to undefined here, and in fetchClient it overrides. Wait, setting to undefined sends string "undefined"! 
-    }
-
     return fetchClient(endpoint, { 
       method: 'POST', 
       body: (isUrlEncoded || isFormData) ? body : JSON.stringify(body),
       ...options,
-      isFormData // custom flag to strip header in fetchClient
+      isFormData
     });
   },
-  put: (endpoint, body, options = {}) => fetchClient(endpoint, { method: 'PUT', body: JSON.stringify(body), ...options }),
-  delete: (endpoint, options = {}) => fetchClient(endpoint, { method: 'DELETE', ...options }),
+  put: (endpoint, body, options = {}) => fetchClient(endpoint, { 
+    method: 'PUT', 
+    body: JSON.stringify(body), 
+    ...options 
+  }),
+  delete: (endpoint, options = {}) => fetchClient(endpoint, { 
+    method: 'DELETE', 
+    ...options 
+  }),
 };
