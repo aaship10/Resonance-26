@@ -12,14 +12,27 @@ const Dashboard = () => {
   // 4. State for live backend data
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'time', direction: 'desc' });
 
-  // 5. Fetch the Maker/Checker queue
+  const [metrics, setMetrics] = useState({
+    pending_review: { total: 0, priority: 0 },
+    sars_filed: { total: 0, accuracy: "99.8%" },
+    volume_trends: [10, 10, 10, 10, 10, 10, 10]
+  });
+
+  // 5. Fetch the Maker/Checker queue and metrics
   useEffect(() => {
     const fetchQueue = async () => {
       try {
         const endpoint = role === 'Approver' ? '/alerts/approver' : '/alerts/analyst';
-        const response = await apiClient.get(endpoint);
+        const [response, metricsResponse] = await Promise.all([
+          apiClient.get(endpoint),
+          apiClient.get('/alerts/metrics')
+        ]);
         setAlerts(response.data);
+        setMetrics(metricsResponse.data);
       } catch (err) {
         console.error("Failed to load queue:", err);
       } finally {
@@ -28,6 +41,20 @@ const Dashboard = () => {
     };
     if (user) fetchQueue();
   }, [user, role]);
+
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    let aVal, bVal;
+    if (sortConfig.key === 'score') {
+      aVal = a.risk_score || 0;
+      bVal = b.risk_score || 0;
+    } else {
+      aVal = new Date(a.created_at || 0).getTime();
+      bVal = new Date(b.created_at || 0).getTime();
+    }
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   // UI Helpers to perfectly preserve your custom styling based on risk score
   const getGradient = (score) => {
@@ -112,7 +139,7 @@ const Dashboard = () => {
             <h3 className="text-on-surface-variant text-sm font-semibold mb-1">New Alerts</h3>
             <div className="flex items-baseline space-x-2">
               <span className="text-4xl font-extrabold text-tertiary tracking-tighter">{alerts.length}</span>
-              <span className="text-xs text-error font-bold">+12% vs avg</span>
+              <span className="text-xs text-error font-bold">Live Data</span>
             </div>
           </div>
           
@@ -125,8 +152,8 @@ const Dashboard = () => {
             </div>
             <h3 className="text-on-surface-variant text-sm font-semibold mb-1">Pending Review</h3>
             <div className="flex items-baseline space-x-2">
-              <span className="text-4xl font-extrabold text-secondary tracking-tighter">12</span>
-              <span className="text-xs text-on-surface-variant font-medium">8 Priority</span>
+              <span className="text-4xl font-extrabold text-secondary tracking-tighter">{metrics.pending_review.total}</span>
+              <span className="text-xs text-on-surface-variant font-medium">{metrics.pending_review.priority} Priority</span>
             </div>
           </div>
 
@@ -139,8 +166,8 @@ const Dashboard = () => {
             </div>
             <h3 className="text-on-surface-variant text-sm font-semibold mb-1">SARs Filed</h3>
             <div className="flex items-baseline space-x-2">
-              <span className="text-4xl font-extrabold text-primary tracking-tighter">156</span>
-              <span className="text-xs text-on-surface-variant font-medium">99.8% Accuracy</span>
+              <span className="text-4xl font-extrabold text-primary tracking-tighter">{metrics.sars_filed.total}</span>
+              <span className="text-xs text-on-surface-variant font-medium">{metrics.sars_filed.accuracy} Accuracy</span>
             </div>
           </div>
         </section>
@@ -152,11 +179,27 @@ const Dashboard = () => {
               <h2 className="text-2xl font-black text-on-surface font-display tracking-tight">{role === 'Approver' ? 'Management Review Queue' : 'Active Alert Queue'}</h2>
               <p className="text-on-surface-variant text-sm">System flagged suspicious activity requiring investigation</p>
             </div>
-            <div className="flex space-x-3">
-              <button className="neomorphic-raised px-4 py-2 rounded-full text-sm font-semibold text-on-surface flex items-center space-x-2 hover:bg-surface-container-high transition-all">
-                <span className="material-symbols-outlined text-sm">filter_list</span>
-                <span>Filter</span>
-              </button>
+            <div className="flex space-x-3 relative">
+              <div className="relative">
+                <button onClick={() => setFilterOpen(!filterOpen)} className="neomorphic-raised px-4 py-2 rounded-full text-sm font-semibold text-on-surface flex items-center space-x-2 hover:bg-surface-container-high transition-all">
+                  <span className="material-symbols-outlined text-sm">filter_list</span>
+                  <span>Sort</span>
+                </button>
+                
+                {filterOpen && (
+                  <div className="absolute right-0 mt-3 w-48 neomorphic-raised rounded-[1rem] bg-surface border border-white/20 p-2 shadow-xl z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="text-[10px] font-bold text-outline-variant uppercase tracking-widest px-3 pt-2 pb-1">Risk Score</div>
+                    <button onClick={() => { setSortConfig({key: 'score', direction: 'desc'}); setFilterOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors ${sortConfig.key === 'score' && sortConfig.direction === 'desc' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}>High to Low</button>
+                    <button onClick={() => { setSortConfig({key: 'score', direction: 'asc'}); setFilterOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors ${sortConfig.key === 'score' && sortConfig.direction === 'asc' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}>Low to High</button>
+                    
+                    <div className="w-full h-px bg-outline-variant/10 my-1"></div>
+
+                    <div className="text-[10px] font-bold text-outline-variant uppercase tracking-widest px-3 pt-2 pb-1">Time Processed</div>
+                    <button onClick={() => { setSortConfig({key: 'time', direction: 'desc'}); setFilterOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors ${sortConfig.key === 'time' && sortConfig.direction === 'desc' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}>Newest First</button>
+                    <button onClick={() => { setSortConfig({key: 'time', direction: 'asc'}); setFilterOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors ${sortConfig.key === 'time' && sortConfig.direction === 'asc' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}>Oldest First</button>
+                  </div>
+                )}
+              </div>
               <button className="neomorphic-raised px-4 py-2 rounded-full text-sm font-semibold text-on-surface flex items-center space-x-2 hover:bg-surface-container-high transition-all">
                 <span className="material-symbols-outlined text-sm">download</span>
                 <span>Export CSV</span>
@@ -179,7 +222,7 @@ const Dashboard = () => {
             ) : alerts.length === 0 ? (
               <div className="text-center py-8 text-on-surface-variant font-bold">Your queue is empty.</div>
             ) : (
-              alerts.map((alert, index) => {
+              sortedAlerts.slice(0, 3).map((alert, index) => {
                 // Determine if this is the "top" active alert to give it the special glowing ring you designed
                 const isTopAlert = index === 0;
                 
@@ -242,15 +285,26 @@ const Dashboard = () => {
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary-container/20 blur-3xl -mr-24 -mt-24 rounded-full"></div>
             <h3 className="font-display font-bold text-lg mb-4 text-on-surface">Volume Trends</h3>
             <div className="h-48 w-full flex items-end space-x-3 mt-6">
-              <div className="flex-1 bg-surface-container-high h-[30%] rounded-t-xl hover:bg-outline-variant/40 transition-colors"></div>
-              <div className="flex-1 bg-surface-container-high h-[45%] rounded-t-xl hover:bg-outline-variant/40 transition-colors"></div>
-              <div className="flex-1 bg-primary-container h-[80%] rounded-t-xl hover:bg-primary transition-colors"></div>
-              <div className="flex-1 bg-primary h-[60%] rounded-t-xl hover:brightness-110 transition-colors"></div>
-              <div className="flex-1 bg-surface-container-high h-[40%] rounded-t-xl hover:bg-outline-variant/40 transition-colors"></div>
-              <div className="flex-1 bg-tertiary-container h-[90%] rounded-t-xl hover:bg-tertiary transition-colors"></div>
-              <div className="flex-1 bg-surface-container-high h-[50%] rounded-t-xl hover:bg-outline-variant/40 transition-colors"></div>
+              {metrics.volume_trends.map((val, i) => {
+                const maxVal = Math.max(...metrics.volume_trends, 1);
+                // Dynamically map height between 15% and 90%
+                const heightPct = Math.max((val / maxVal) * 90, 15);
+                const isLatest = i === metrics.volume_trends.length - 1;
+                
+                return (
+                  <div 
+                    key={i} 
+                    className={`flex-1 rounded-t-xl transition-all duration-500 ease-out group/bar relative ${isLatest ? 'bg-primary hover:brightness-110' : 'bg-surface-container-high hover:bg-outline-variant/40'}`} 
+                    style={{ height: `${heightPct}%` }}
+                  >
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface shadow-md border border-outline-variant/30 text-on-surface-variant text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none">
+                      {val}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-xs text-on-surface-variant mt-6 italic">*Alert generation increased by 14% over the last 48 hours</p>
+            <p className="text-xs text-on-surface-variant mt-6 italic">*Alert volume over the last 7 days pulled directly from database historicals.</p>
           </div>
           
           <div className="md:col-span-2 neomorphic-raised rounded-3xl p-8 flex flex-col justify-between">

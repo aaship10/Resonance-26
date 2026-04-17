@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; // 1. Added useParams
 import Sidebar from '../components/Sidebar';
 import apiClient from '../api/axios'; // 2. Added our secure FastAPI client
@@ -9,6 +9,8 @@ const InvestigationHub = () => {
 
   // 4. State to hold the live data from your database
   const [alertData, setAlertData] = useState(null);
+  const [customerData, setCustomerData] = useState(null);
+  const [txData, setTxData] = useState([]);
 
   // 5. Fetch the alert details on load
 // src/pages/InvestigationHub.jsx
@@ -16,8 +18,10 @@ const InvestigationHub = () => {
   useEffect(() => {
     const fetchCaseDetails = async () => {
       try {
-        const response = await apiClient.get(`/alerts/${alertId}`);
-        setAlertData(response.data);
+        const response = await apiClient.get(`/alerts/${alertId}/investigation`);
+        setAlertData(response.data.alert);
+        setCustomerData(response.data.customer);
+        setTxData(response.data.transactions);
       } catch (err) {
         console.error("Failed to load case data:", err);
       }
@@ -35,8 +39,83 @@ const InvestigationHub = () => {
         alert_type: "Human-Initiated Tip",
         created_at: new Date().toISOString()
       });
+      setCustomerData({
+        full_name: "Pending Intake",
+        expected_monthly_income: 0,
+        occupation: "Unknown",
+        tax_id_pan: "TBD"
+      });
+      setTxData([]);
     }
   }, [alertId]);
+
+  // Draggable Map State
+  const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - mapOffset.x, y: e.clientY - mapOffset.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setMapOffset({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  // Dictionary mapping country strings to X,Y percentages on our SVG background
+  const GEO_MAP = {
+    'Domestic': { x: 70, y: 48 },
+    'India': { x: 70, y: 48 },
+    'Dubai': { x: 63, y: 44 },
+    'UAE': { x: 63, y: 44 },
+    'USA': { x: 25, y: 38 },
+    'United States': { x: 25, y: 38 },
+    'UK': { x: 48, y: 32 },
+    'London': { x: 48, y: 32 },
+    'Singapore': { x: 78, y: 55 },
+    'China': { x: 76, y: 42 },
+    'Russia': { x: 65, y: 25 },
+    'Australia': { x: 85, y: 75 }
+  };
+
+  // Parse Unique Counterparties for Nodes
+  const uniqueCounterparties = [];
+  const locationCounts = {};
+  const seenCP = new Set();
+  txData.forEach(tx => {
+    const cpName = tx.counterparty_name || `Via ${tx.channel}`; 
+    const country = tx.counterparty_location || 'Domestic';
+    
+    if (!seenCP.has(cpName) && uniqueCounterparties.length < 15) { 
+      seenCP.add(cpName);
+      const baseCoords = GEO_MAP[country] || { x: 45 + Math.random()*20, y: 65 + Math.random()*15 };
+      
+      // Jitter overlapping nodes so they don't perfectly stack
+      const count = locationCounts[country] || 0;
+      locationCounts[country] = count + 1;
+      
+      const jitterX = count > 0 ? (count * 2) * (count % 2 === 0 ? 1 : -1) : 0;
+      const jitterY = count > 0 ? (count * 1.5) * (count % 3 === 0 ? 1 : -1) : 0;
+
+      uniqueCounterparties.push({
+        name: cpName,
+        country: country,
+        amount: tx.amount_inr,
+        type: tx.tx_type,
+        channel: tx.channel,
+        coords: { x: baseCoords.x + jitterX, y: baseCoords.y + jitterY }
+      });
+    }
+  });
+  
+  const displayNodes = uniqueCounterparties;
 
   return (
     <div className="bg-surface text-on-surface font-body min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
@@ -168,49 +247,134 @@ const InvestigationHub = () => {
               </div>
 
               {/* Network Visualization Container (Neomorphic Inset) */}
-              <div className="flex-1 relative neomorphic-inset rounded-2xl overflow-hidden flex items-center justify-center mt-2 shadow-[inset_0_4px_15px_rgba(0,0,0,0.02)] border border-white/20 bg-surface/50">
-                
-                {/* Central Node */}
-                <div className="relative z-20 w-14 h-14 rounded-full neomorphic-raised flex items-center justify-center text-primary hover:scale-110 transition-transform cursor-pointer border border-white/50">
-                  <span className="material-symbols-outlined text-[24px]">apartment</span>
-                </div>
-                
-                {/* SVG Network Lines */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.4]">
-                  <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4,4" className="text-primary/50">
-                    <line x1="50%" x2="28%" y1="50%" y2="28%"></line>
-                    <line x1="50%" x2="72%" y1="50%" y2="25%"></line>
-                    <line x1="50%" x2="25%" y1="50%" y2="60%"></line>
-                    <line x1="50%" x2="75%" y1="50%" y2="65%"></line>
-                    <line x1="50%" x2="45%" y1="50%" y2="15%"></line>
-                    <line x1="50%" x2="58%" y1="50%" y2="82%"></line>
-                  </g>
-                </svg>
+              <div 
+                className={`flex-1 relative neomorphic-inset rounded-2xl overflow-hidden flex items-center justify-center mt-2 shadow-[inset_0_4px_15px_rgba(0,0,0,0.02)] border border-white/20 bg-surface/50 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                <div 
+                  className="absolute inset-0 w-[150%] h-[150%] origin-center"
+                  style={{ transform: `translate(${mapOffset.x}px, ${mapOffset.y}px) scale(0.85)`, left: '-25%', top: '-25%' }}
+                >
+                  {/* World Map Silhouette Background */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.10]">
+                    <svg viewBox="0 0 1008 650" className="w-full h-full fill-on-surface-variant">
+                      <path d="M120,180 Q140,150 180,160 Q210,140 250,150 Q240,190 220,230 Q180,260 160,250 Q130,220 120,180 Z" /> {/* NA */}
+                      <path d="M220,280 Q250,290 270,330 Q260,380 230,420 Q200,400 190,340 Z" /> {/* SA */}
+                      <path d="M430,120 Q480,100 520,130 Q540,180 500,200 Q450,190 430,150 Z" /> {/* Europe */}
+                      <path d="M450,220 Q520,210 570,250 Q560,330 520,380 Q450,350 430,280 Z" /> {/* Africa */}
+                      <path d="M540,120 Q650,80 750,100 Q800,160 820,220 Q780,280 700,300 Q650,330 580,250 Z" /> {/* Asia */}
+                      <path d="M800,380 Q850,360 880,400 Q860,460 810,450 Z" /> {/* Aus */}
+                    </svg>
+                  </div>
 
-                {/* Satellite Nodes */}
-                <div className="absolute top-[26%] left-[26%] w-8 h-8 rounded-full neomorphic-raised border border-white/40 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                  <span className="w-2 h-2 rounded-full bg-primary/70"></span>
-                </div>
-                
-                <div className="absolute top-[23%] right-[23%] w-10 h-10 rounded-full neomorphic-raised border border-white/40 shadow-[inset_0_0_10px_rgba(255,0,0,0.05)] flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                  <span className="material-symbols-outlined text-error text-[16px]">warning</span>
-                </div>
-                
-                <div className="absolute bottom-[38%] left-[23%] w-8 h-8 rounded-full neomorphic-raised border border-white/40 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                  <span className="w-2 h-2 rounded-full bg-outline-variant/60"></span>
-                </div>
-                
-                <div className="absolute bottom-[23%] right-[27%] w-11 h-11 rounded-full neomorphic-raised border border-white/40 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">account_balance</span>
-                </div>
-                
-                {/* Neomorphic Glows */}
-                <div className="absolute top-[13%] left-[43%] w-16 h-16 rounded-full bg-primary-container/20 blur-xl"></div>
-                <div className="absolute bottom-[16%] left-[56%] w-16 h-16 rounded-full bg-error/10 blur-xl"></div>
+                  {/* SVG Network Lines FROM HUB to NODES */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.8] z-10">
+                    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="5,5" className="text-primary/60">
+                      {displayNodes.map((node, i) => (
+                        <line key={`line-${i}`} x1="70%" y1="48%" x2={`${node.coords.x}%`} y2={`${node.coords.y}%`} />
+                      ))}
+                    </g>
+                  </svg>
 
-                {/* Floating Data Label */}
-                <div className="absolute top-[48%] left-[70%] -translate-x-1/2 p-2 liquid-glass rounded-xl text-[10px] font-bold text-on-surface shadow-sm border border-white/50 cursor-default z-30">
-                  Transaction Flagged
+                  {/* Central Hub Node (Always Fixed at India/Domestic 70/48) */}
+                  <div className="absolute z-20 w-16 h-16 rounded-full neomorphic-raised flex flex-col items-center justify-center text-primary border border-white/80 bg-surface/90 shadow-lg backdrop-blur-sm"
+                       style={{ left: `70%`, top: `48%`, transform: 'translate(-50%, -50%)' }}>
+                    <span className="material-symbols-outlined text-[24px]">apartment</span>
+                    <span className="text-[8px] font-bold mt-1 text-on-surface text-center leading-tight">SUBJECT<br/>HUB</span>
+                  </div>
+
+                  {/* Dynamic Geographic Satellite Nodes */}
+                  {displayNodes.map((node, i) => {
+                    const isError = node.country !== 'Domestic' && node.country !== 'India';
+                    return (
+                      <div 
+                        key={`node-${i}`}
+                        className="absolute group z-30"
+                        style={{ left: `${node.coords.x}%`, top: `${node.coords.y}%`, transform: 'translate(-50%, -50%)' }}
+                      >
+                        <div className={`w-11 h-11 rounded-full neomorphic-raised border border-white/40 shadow-sm flex items-center justify-center cursor-crosshair bg-surface/80 backdrop-blur-sm ${isError ? 'shadow-[inset_0_0_10px_rgba(255,0,0,0.05)]' : ''}`}>
+                          {isError ? (
+                            <span className="material-symbols-outlined text-error text-[18px]">warning</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-primary text-[18px]">account_balance</span>
+                          )}
+                        </div>
+                        
+                        {/* Hover Tooltip (Country & CP Name) */}
+                        <div className="absolute top-12 left-1/2 -translate-x-1/2 p-2.5 liquid-glass rounded-xl text-[11px] whitespace-nowrap font-bold text-on-surface shadow-md border border-white/60 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex flex-col items-center z-50">
+                          <span className="font-display tracking-tight text-[13px]">{node.name}</span>
+                          <span className={`text-[10px] uppercase tracking-wider ${isError ? 'text-error' : 'text-primary'}`}>{node.country}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* NEW SECTION: Subject & Transaction Deep Dive */}
+        <div className="w-full max-w-[1100px] grid grid-cols-12 gap-8 relative z-10 pb-40 mt-0 justify-center">
+          <div className="col-span-12 neomorphic-raised rounded-[2rem] p-8 w-full min-h-[400px]">
+            <h3 className="text-xl font-bold font-display text-on-surface flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-primary text-[24px]">manage_search</span>
+              Subject KYC & Financial Ledger
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* KYC Column */}
+              <div className="md:col-span-1 neomorphic-recessed rounded-2xl p-6 bg-surface/50 border border-white/20">
+                <h4 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">KYC Profile</h4>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] text-outline-variant font-bold uppercase tracking-widest">Full Name</p>
+                    <p className="text-sm font-bold text-on-surface">{customerData?.full_name || 'Loading...'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-outline-variant font-bold uppercase tracking-widest">Occupation</p>
+                    <p className="text-sm font-bold text-on-surface">{customerData?.occupation || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-outline-variant font-bold uppercase tracking-widest">Tax / PAN ID</p>
+                    <p className="text-sm font-bold text-on-surface">{customerData?.tax_id_pan || 'Not Provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-outline-variant font-bold uppercase tracking-widest">Expected Income</p>
+                    <p className="text-sm font-bold text-primary">₹{(customerData?.expected_monthly_income || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transactions Column */}
+              <div className="md:col-span-2">
+                <h4 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Transaction History</h4>
+                
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {txData.length === 0 ? (
+                    <div className="text-xs text-on-surface-variant text-center py-8 font-bold">No transactions logged.</div>
+                  ) : (
+                    txData.map((tx, idx) => (
+                      <div key={idx} className="grid grid-cols-4 items-center neomorphic-raised rounded-xl px-4 py-3 bg-surface hover:scale-[1.01] transition-transform">
+                        <div>
+                          <p className="text-[11px] font-bold text-on-surface">{tx.tx_type}</p>
+                          <p className="text-[9px] text-on-surface-variant">{new Date(tx.tx_date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-[11px] font-bold text-on-surface truncate pr-2">{tx.counterparty_name || 'Self/Cash'}</p>
+                          <p className="text-[9px] text-on-surface-variant">{tx.channel} • {tx.counterparty_location || 'Domestic'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-[12px] font-black ${tx.tx_type === 'CREDIT' ? 'text-primary' : 'text-error'}`}>
+                            {tx.tx_type === 'CREDIT' ? '+' : '-'}₹{(tx.amount_inr || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ import AdminDashboard from './pages/AdminDashboard'; // Added
 import ComingSoon from './pages/ComingSoon';
 import UploadCenter from './pages/UploadCenter';
 import Archive from './pages/Archive';
+import AlertQueue from './pages/AlertQueue';
 
 // A strict security wrapper to prevent URL-guessing
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -58,6 +59,14 @@ function App() {
           />
 
           {/* Analyst / Maker Routes */}
+          <Route 
+            path="/alert-queue" 
+            element={
+              <ProtectedRoute allowedRoles={['Analyst']}>
+                <AlertQueue />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
               path="/investigate/:alertId" 
               element={

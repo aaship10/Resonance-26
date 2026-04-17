@@ -50,7 +50,7 @@ const Sidebar = () => {
         {/* Analyst Only Views */}
         {user?.role === 'Analyst' && (
           <>
-            <SidebarItem icon="notification_important" label="Alert Queue" path="/dashboard" />
+            <SidebarItem icon="notification_important" label="Alert Queue" path="/alert-queue" />
             <SidebarItem icon="manage_search" label="Investigations" path="/investigation" aliases={['/generating', '/editor', '/narrative']} />
           </>
         )}
