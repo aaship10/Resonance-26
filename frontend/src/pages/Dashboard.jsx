@@ -594,7 +594,7 @@ const Dashboard = () => {
                 return (
                   <div 
                     key={alert.id}
-                    onClick={() => navigate(`/editor/${alert.id}`)}
+                    onClick={() => navigate(`/investigate/${alert.id}`)}
                     className={`grid grid-cols-6 items-center px-8 py-5 neomorphic-raised rounded-2xl bg-surface transition-all duration-300 cursor-pointer ${
                       isTopAlert 
                         ? 'ring-2 ring-primary-container/40 shadow-[0_0_20px_rgba(211,197,224,0.4)] scale-[1.01] relative z-10' 

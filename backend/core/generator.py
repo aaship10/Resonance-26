@@ -149,9 +149,32 @@ ANALYST ID TO RECORD IN LOG: {analyst_id}
 Begin generating the SAR now, strictly following the Section C format. Do not omit any sections.
 """
 
+    # Reviewer system prompt — instructs the second agent to annotate, not rewrite
+    # Reviewer system prompt — instructs the second agent to annotate, not rewrite
+    reviewer_system_prompt = """You are a strict QA Compliance Reviewer. Your job is to read a Suspicious Activity Report (SAR) draft. 
+    
+    Your ONLY task is to identify specific high-risk data points, entities, and analytical claims, and wrap those specific words or short phrases in <flag> and </flag> tags so a human analyst can verify them against raw data.
+    
+    You must identify and flag the following specific elements whenever they appear in the text:
+    
+    1. IDENTITY & KYC: Exact names, account numbers, account types, dates of birth, PAN/Tax IDs, nationalities, and account opening dates.
+    2. FINANCIALS: All exact monetary amounts, aggregate totals, declared monthly incomes, and transaction counts.
+    3. OCCUPATION & INCOME: Mentions of the subject's occupation, especially high-risk sectors (e.g., Jewellery Dealer, Real Estate, Hawala, Cash-Intensive Business), and any ratios comparing income to transaction volume.
+    4. LOCATIONS & COUNTERPARTIES: Counterparty names, bank names, branch names, and all country names/jurisdictions (especially high-risk or cross-border exposures).
+    5. CHANNELS: Specific payment methods mentioned (e.g., CASH, CRYPTO, IMPS, UPI, Hawala, Wire Transfer).
+    6. REGULATORY & RISK: Mentions of the calculated Risk Score, Alert Thresholds, Confidence Levels, specific laws/regulations cited (e.g., PMLA Section 12A, FATF), and filing jurisdictions (e.g., FIU-IND).
+    7. ANALYTICAL INFERENCES: Claims made by the writer assessing fault, typology linkages (e.g., "indicative of structuring", "shell company risk", "PEP linkage"), or statements ruling out false positives (e.g., "no evidence of legitimate business purpose").
+
+    CRITICAL RULES:
+    1. DO NOT change, rewrite, or summarize any of the original text.
+    2. DO NOT remove the [REF: ID] tags.
+    3. DO NOT add any conversational filler, scorecards, rubrics, or decisions. 
+    4. ONLY output the exact SAR text provided to you, with the <flag> tags injected.
+    """
+
     try:
-        # 3. Execute the Llama generation via Groq
-        completion = client.chat.completions.create(
+        # 3a. STEP 1 — Writer Agent: Execute the primary SAR generation
+        writer_completion = client.chat.completions.create(
             model=LLM_MODEL_NAME,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -160,8 +183,23 @@ Begin generating the SAR now, strictly following the Section C format. Do not om
             temperature=0.1,  # Extremely low temperature for strict factual adherence
             max_tokens=3000   # Provide enough room for the massive 12-section report
         )
-        
-        return completion.choices[0].message.content
+        initial_draft = writer_completion.choices[0].message.content
+        print("Writer Agent: SAR draft generated successfully.")
+
+        # 3b. STEP 2 — Reviewer Agent: Annotate critical data points with <flag> tags
+        reviewer_completion = client.chat.completions.create(
+            model=LLM_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": reviewer_system_prompt},
+                {"role": "user", "content": initial_draft}
+            ],
+            temperature=0.0,  # Zero temperature — the reviewer must be deterministic
+            max_tokens=3500   # Slightly larger to account for added <flag> tag tokens
+        )
+        reviewed_report = reviewer_completion.choices[0].message.content
+        print("Reviewer Agent: Critical data points flagged successfully.")
+
+        return reviewed_report
 
     except Exception as e:
         print(f"CRITICAL ERROR IN LLM GENERATION: {str(e)}")

@@ -16,6 +16,7 @@ const AiGeneration = () => {
     "Extracting counterparty risk profiles...",
     "Prompting Llama 3.3 for narrative generation...",
     "Structuring 5-part compliance report...",
+    "Reviewer Agent validating assertions and highlighting risks...",
     "Finalizing cryptographic audit trail...",
     "Committing draft to secure vault..."
   ];

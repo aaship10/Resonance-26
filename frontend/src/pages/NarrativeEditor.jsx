@@ -432,25 +432,26 @@ const NarrativeEditor = () => {
     }
   };
 
-  // --- NEW: THE MAGIC REGEX PARSER ---
+  // --- MAGIC REGEX PARSER: handles [REF: ID] citations AND <flag> reviewer annotations ---
   const renderInteractiveText = (text) => {
     if (!text) return null;
-    
-    const parts = text.split(/(\[REF:.*?\])/g);
-    
+
+    // Combined regex: matches either a [REF: ...] tag OR a <flag>...</flag> block
+    const parts = text.split(/(\[REF:.*?\]|<flag>[\s\S]*?<\/flag>)/g);
+
     return parts.map((part, index) => {
+      // --- Handle [REF: ID] citation chips ---
       if (part.startsWith('[REF:') && part.endsWith(']')) {
-        // CRITICAL FIX: Strip out BOTH the brackets AND the "REF: " prefix
-        const refId = part.replace(/\[REF:\s*|\s*\]/g, '').trim(); 
+        const refId = part.replace(/\[REF:\s*|\s*\]/g, '').trim();
         const isActive = activeRef === refId;
-        
+
         return (
           <span
             key={index}
             onClick={() => setActiveRef(refId)}
             className={`cursor-pointer mx-1 px-1.5 py-0.5 rounded text-[12px] font-bold transition-colors shadow-sm inline-flex items-center gap-1 ${
-              isActive 
-                ? 'bg-primary text-white scale-105 transform' 
+              isActive
+                ? 'bg-primary text-white scale-105 transform'
                 : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
             }`}
           >
@@ -459,6 +460,22 @@ const NarrativeEditor = () => {
           </span>
         );
       }
+
+      // --- Handle <flag>...</flag> reviewer annotations ---
+      if (part.startsWith('<flag>') && part.endsWith('</flag>')) {
+        const innerText = part.replace(/^<flag>/, '').replace(/<\/flag>$/, '');
+        return (
+          <span
+            key={index}
+            className="bg-yellow-400/30 text-yellow-900 border border-yellow-500/50 rounded px-1 font-semibold"
+            title="Reviewer flagged: verify this data point"
+          >
+            {innerText}
+          </span>
+        );
+      }
+
+      // --- Plain text segment ---
       return <span key={index} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
     });
   };
