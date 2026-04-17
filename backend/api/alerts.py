@@ -24,7 +24,7 @@ def get_analyst_queue(db: Session = Depends(get_db), current_user: dict = Depend
         raise HTTPException(status_code=403, detail="Only Analysts can view this queue.")
     return db.query(Alert).filter(
         Alert.assigned_analyst_id == current_user.get("sub"),
-        Alert.status.in_(["PENDING_ASSIGNMENT", "ASSIGNED", "DRAFTING"])
+        Alert.status.in_(["PENDING_ASSIGNMENT", "ASSIGNED", "DRAFTING", "REJECTED"])
     ).order_by(Alert.created_at.desc()).all()
 
 @router.get("/approver", response_model=List[AlertResponse])
@@ -36,6 +36,30 @@ def get_approver_queue(db: Session = Depends(get_db), current_user: dict = Depen
     return db.query(Alert).filter(
         Alert.status == "UNDER_REVIEW"
     ).order_by(Alert.created_at.desc()).all()
+
+@router.post("/{alert_id}/reject")
+def reject_sar_draft(
+    alert_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Returns the SAR to the Analyst for further work.
+    """
+    if current_user.get("role") != "Approver":
+        raise HTTPException(status_code=403, detail="Only Approvers can reject drafts.")
+        
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found.")
+    
+    # Update status to REJECTED. 
+    # It stays assigned to the same 'assigned_analyst_id'.
+    alert.status = "REJECTED"
+    alert.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    return {"message": "Draft rejected and returned to Analyst."}
 
 @router.get("/archive", response_model=List[AlertResponse])
 def get_archive_queue(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
