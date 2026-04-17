@@ -1,0 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Work+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body overflow-x-hidden;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-on-surface font-semibold;
+  }
+}
+
+@layer utilities {
+  .liquid-glass {
+    @apply bg-primary-container bg-opacity-50 backdrop-blur-[20px];
+    box-shadow: inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.7), 0 2px 4px rgba(0,0,0,0.02);
+  }
+
+  .liquid-glass-panel {
+    @apply bg-surface-container-highest bg-opacity-50 backdrop-blur-[16px] rounded-[1.5rem];
+    border-top: 1px solid rgba(101, 101, 92, 0.1); 
+    border-left: 1px solid rgba(101, 101, 92, 0.1);
+  }
+
+  .neomorphic-btn {
+    @apply transition-all duration-300 rounded-xl relative overflow-hidden flex items-center justify-center font-display font-semibold;
+    background: linear-gradient(135deg, #6b5876, #4e3b58);
+    color: white;
+    box-shadow: 0 4px 6px rgba(107, 88, 118, 0.2);
+  }
+  
+  .neomorphic-btn:hover {
+    @apply bg-opacity-90;
+    backdrop-filter: blur(24px);
+  }
+
+  .neomorphic-btn:active {
+    @apply shadow-neomorphic-inset;
+    background: #4e3b58;
+    transform: translateY(1px);
+  }
+
+  .ghost-border {
+    border: 1px solid rgba(203, 190, 201, 0.2); /* outline-variant */
+  }
+
+  .recessed-input {
+    @apply bg-surface-container-high shadow-[inset_1px_1px_4px_rgba(0,0,0,0.05),inset_-1px_-1px_4px_rgba(255,255,255,0.5)] rounded-lg px-4 py-2 outline-none border border-transparent transition-all;
+  }
+  
+  .recessed-input:focus {
+    @apply bg-surface-container-highest border-[rgba(203,190,201,0.3)];
+  }
+  
+  .risk-pillow {
+    @apply bg-tertiary-container text-tertiary px-3 py-1 rounded-full text-sm font-semibold shadow-[1px_1px_3px_rgba(0,0,0,0.05),-1px_-1px_3px_rgba(255,255,255,0.5)];
+  }
+
+  .neomorphic-raised {
+    background: #f3eff6;
+    box-shadow: 8px 8px 16px rgba(203, 190, 201, 0.4), -8px -8px 16px #ffffff;
+  }
+  
+  .safe-pillow {
+    @apply bg-secondary-container text-secondary px-3 py-1 rounded-full text-sm font-semibold shadow-[1px_1px_3px_rgba(0,0,0,0.05),-1px_-1px_3px_rgba(255,255,255,0.5)];
+  }
+
+  .neomorphic-inset {
+    box-shadow: inset 4px 4px 8px #e2e0ed, inset -4px -4px 8px #ffffff;
+  }
+
+  .glass-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(161, 209, 254, 0.4), transparent);
+    background-size: 200% 100%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 3s infinite linear;
+  }
+
+  .neo-inset {
+    box-shadow: inset 4px 4px 8px rgba(56, 56, 48, 0.08), inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+  }
+
+  .neo-raised {
+    box-shadow: 6px 6px 12px rgba(56, 56, 48, 0.06), -6px -6px 12px rgba(255, 255, 255, 0.9);
+  }
+
+  .shimmer-thread {
+    background: linear-gradient(90deg, transparent, rgba(161, 209, 254, 0.4), transparent);
+    background-size: 200% 100%;
+  }
+
+  .panel-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .panel-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .panel-scroll::-webkit-scrollbar-thumb {
+    background: rgba(55, 104, 144, 0.2);
+    border-radius: 10px;
+  }
+
+  .neomorphic-recessed {
+    background: #ebe9f2; /* surface-container-high */
+    box-shadow: inset 4px 4px 8px rgba(52, 51, 59, 0.06), 
+                inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+  }
+  
+  .neomorphic-pill {
+    background: #d3c5e0; /* primary-container */
+    box-shadow: 4px 4px 12px rgba(55, 104, 144, 0.2),
+                -4px -4px 12px rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease;
+  }
+  
+  .neomorphic-pill:active {
+    box-shadow: inset 2px 2px 5px rgba(55, 104, 144, 0.3),
+                inset -2px -2px 5px rgba(255, 255, 255, 0.5);
+    transform: scale(0.98);
+  }
+  
+  .toggle-active {
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.04);
+  }
+  
+  .ambient-glow {
+    box-shadow: 0 40px 80px -20px rgba(52, 51, 59, 0.08), 
+                0 10px 30px -5px rgba(55, 104, 144, 0.04);
+  }
+}
