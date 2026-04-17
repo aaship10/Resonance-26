@@ -141,7 +141,7 @@ const NarrativeEditor = () => {
                 onClick={() => setIsEditMode(false)}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${!isEditMode ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'}`}
               >
-                Interactive View
+                Read Mode
               </button>
               <button 
                 onClick={() => setIsEditMode(true)}
@@ -153,24 +153,23 @@ const NarrativeEditor = () => {
             </div>
           </div>
           
-          <div className="neomorphic-raised rounded-[2rem] p-10 border-0 flex flex-col relative pb-32 h-[650px]">
+          <div className={`neomorphic-raised rounded-[2rem] p-10 border-0 flex flex-col relative h-[650px] ${isEditMode ? 'pb-32' : 'pb-10'}`}>
             {/* CRITICAL FIX: overflow-y-auto enables scrolling! */}
-            <div className="pr-4 relative z-10 h-full overflow-y-auto">
-              <div className="max-w-3xl mx-auto space-y-6 text-on-surface leading-relaxed font-normal text-[16px]">
+            <div className="pr-4 relative z-10 h-full overflow-y-auto flex flex-col">
+              <div className="max-w-3xl items-start w-full mx-auto space-y-6 text-on-surface leading-relaxed font-normal text-[16px] flex-1 flex flex-col">
                 
                 {isLoading ? (
                   <p className="animate-pulse text-on-surface-variant">Loading SAR Draft from Sentinel AI...</p>
                 ) : isEditMode ? (
                   /* RAW TEXTAREA MODE */
                   <textarea
-                    // FIX: Changed overflow-y-hidden to overflow-y-auto, added resize-y
-                    className="w-full min-h-[500px] h-full bg-transparent border-none outline-none focus:ring-0 text-on-surface leading-relaxed font-normal text-[16px] resize-y overflow-y-auto break-words whitespace-pre-wrap"
+                    className="w-full flex-1 bg-transparent border-none outline-none focus:ring-0 text-on-surface leading-relaxed font-normal text-[16px] resize-none overflow-y-auto break-words whitespace-pre-wrap min-h-[300px]"
                     value={sarData.narrative}
                     onChange={(e) => setSarData({...sarData, narrative: e.target.value})}
                   />
                 ) : (
                   /* INTERACTIVE CLICKABLE MODE */
-                  <div className="w-full min-h-[500px] bg-transparent border-none text-on-surface leading-relaxed font-normal text-[16px] break-words whitespace-pre-wrap">
+                  <div className="w-full bg-transparent border-none text-on-surface leading-relaxed font-normal text-[16px] break-words whitespace-pre-wrap h-max">
                     {renderInteractiveText(sarData.narrative)}
                   </div>
                 )}
@@ -179,47 +178,31 @@ const NarrativeEditor = () => {
             </div>
 
             {/* Floating Toolbar inside block (RESTORED) */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-20 pointer-events-none">
-              <div className="flex items-center gap-2 p-2 liquid-glass rounded-full border border-white/40 shadow-ambient-float pointer-events-auto">
-                <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
-                  <span className="material-symbols-outlined text-[20px] block">edit</span>
-                </button>
-                <div className="w-[1px] h-6 bg-outline-variant/30"></div>
-                <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
-                  <span className="material-symbols-outlined text-[20px] block">attachment</span>
-                </button>
-                <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
-                  <span className="material-symbols-outlined text-[20px] block">translate</span>
-                </button>
-                <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
-                  <span className="material-symbols-outlined text-[20px] block">balance</span>
-                </button>
-                <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
-                  <span className="material-symbols-outlined text-[20px] block">spellcheck</span>
-                </button>
+            {isEditMode && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-20 pointer-events-none">
+                <div className="flex items-center gap-2 p-2 liquid-glass rounded-full border border-white/40 shadow-ambient-float pointer-events-auto">
+                  <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
+                    <span className="material-symbols-outlined text-[20px] block">attachment</span>
+                  </button>
+                  <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
+                    <span className="material-symbols-outlined text-[20px] block">translate</span>
+                  </button>
+                  <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
+                    <span className="material-symbols-outlined text-[20px] block">balance</span>
+                  </button>
+                  <button className="p-2.5 rounded-full hover:bg-surface/50 transition-colors text-on-surface-variant hover:text-primary">
+                    <span className="material-symbols-outlined text-[20px] block">spellcheck</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Command Bar (RESTORED) */}
-          <div className="mt-2 px-1 z-20 w-[95%] mx-auto">
-            <div className="relative group">
-              <div className="absolute -inset-[1.5px] bg-gradient-to-r from-primary-container to-secondary-container rounded-[1.25rem] blur-[3px] opacity-40 group-hover:opacity-70 transition duration-500"></div>
-              <div className="relative neomorphic-raised rounded-2xl p-2 flex items-center gap-4 bg-surface/80 backdrop-blur-sm border-0">
-                <div className="pl-4">
-                  <span className="material-symbols-outlined text-primary text-[22px] block">terminal</span>
-                </div>
-                <input className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-on-surface placeholder:text-outline-variant/60 font-body text-[14px] py-2" placeholder="Refine narrative with commands (e.g., 'Focus more on high-velocity deposits')..." type="text"/>
-                <button className="p-2 rounded-[0.8rem] bg-primary-container text-primary hover:brightness-95 active:scale-95 transition-all w-10 h-10 flex items-center justify-center">
-                  <span className="material-symbols-outlined block text-[18px]">send</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          
         </section>
 
         {/* Right Panel: Audit Trail (Intelligence Stream) */}
-        <aside className="w-[400px] flex flex-col gap-5 shrink-0 sticky top-28 h-[calc(100vh-14rem)]">
+        <aside className="w-[400px] flex flex-col gap-6 shrink-0 sticky top-28">
           <div className="flex items-center justify-between px-2">
             <h2 className="font-display font-extrabold text-[22px] tracking-tight text-on-surface">Intelligence Stream</h2>
             {/* Show clear button if a filter is active */}
@@ -233,9 +216,9 @@ const NarrativeEditor = () => {
             )}
           </div>
           
-          <div className="flex-1 neomorphic-raised rounded-[2rem] p-6 flex flex-col gap-5 relative overflow-hidden border-0">
+          <div className="neomorphic-raised rounded-[2rem] p-6 flex flex-col gap-5 relative overflow-hidden border-0 h-[650px]">
             
-            <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-2">
               {isLoading ? (
                 <p className="text-sm text-on-surface-variant animate-pulse">Loading Vector DB evidence...</p>
               ) : displayLogs.length > 0 ? (

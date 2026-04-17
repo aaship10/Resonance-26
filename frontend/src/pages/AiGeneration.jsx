@@ -66,29 +66,12 @@ const AiGeneration = () => {
 
   return (
     <div className="bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen relative overflow-hidden flex items-center justify-center">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#f5f3ff]/80 backdrop-blur-xl flex justify-between items-center px-8 h-16 shadow-[0_10px_30px_-15px_rgba(45,45,58,0.05)] bg-gradient-to-b from-[#c9c7d6]/10 to-transparent">
+      {/* Top Identity Bar */}
+      <header className="fixed top-0 w-full z-50 bg-[#f5f3ff]/80 backdrop-blur-xl flex items-center px-8 h-16 shadow-[0_10px_30px_-15px_rgba(45,45,58,0.05)] bg-gradient-to-b from-[#c9c7d6]/10 to-transparent pointer-events-none">
         <div className="flex items-center gap-8">
           <span className="text-xl font-black text-on-surface uppercase tracking-widest font-display">SENTINEL SAR</span>
-          <div className="hidden md:flex gap-6 items-center">
-            <a className="font-display font-bold tracking-tight text-primary border-b-2 border-primary pb-1 active:scale-95 transition-transform duration-200" href="#">Dashboard</a>
-            <a className="font-display font-bold tracking-tight text-on-surface/60 hover:text-on-surface transition-colors active:scale-95 duration-200" href="#">Cases</a>
-            <a className="font-display font-bold tracking-tight text-on-surface/60 hover:text-on-surface transition-colors active:scale-95 duration-200" href="#">Intelligence</a>
-            <a className="font-display font-bold tracking-tight text-on-surface/60 hover:text-on-surface transition-colors active:scale-95 duration-200" href="#">Audit</a>
-          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors active:scale-95">
-            <span className="material-symbols-outlined text-primary">notifications</span>
-          </button>
-          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors active:scale-95">
-            <span className="material-symbols-outlined text-primary">settings</span>
-          </button>
-          <div className="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
-            <img alt="Investigator Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDoz9CWKj_L2JEID2tjXlKfocxGFEgXTeTvRsOfTlkX372XIWAD2oPaAgzyyYaNtvoOoOGoImeshTDTraiup8ntwaDoyL4PhsfIbJOn_OYZMEOplrHITCmqqV7aMgLVrJujvGs9lVfFrWOEe0VFpUCHgJPqqoXykopoOI2eiT5-0P-isGIWSC8ZwfYfFXGIFzp4zObs5SbzwO3oumMXetsafMLrbl_vF40EqWEx4h6xO-gQR50DA7QxptMH-JmTEqazR_PvabWtQwY"/>
-          </div>
-        </div>
-      </nav>
+      </header>
 
       <Sidebar />
 
